@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Homeview",
+        "description": "Adds the Homeview dashboard builder panel to the sidebar. No further configuration is needed."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Homeview is already set up."
+    }
+  }
+}

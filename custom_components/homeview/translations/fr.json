@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Homeview",
+        "description": "Ajoute le panneau Homeview de composition de dashboards à la barre latérale. Aucune configuration supplémentaire n'est nécessaire."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Homeview est déjà configuré."
+    }
+  }
+}

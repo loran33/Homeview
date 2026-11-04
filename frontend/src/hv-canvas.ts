@@ -236,6 +236,12 @@ export class HomeviewCanvas extends LitElement {
         : (entity?.attributes.icon as string | undefined);
     const label =
       typeof card.card_type === "string" ? `${card.type} · ${card.card_type}` : card.type;
+    const displayName = cardDisplayName(card);
+    const meta = entity
+      ? `${label} — ${entity.state}`
+      : displayName === label
+        ? ""
+        : label;
 
     return html`
       <div
@@ -256,8 +262,8 @@ export class HomeviewCanvas extends LitElement {
       >
         <ha-icon .icon=${icon ?? "mdi:card-outline"}></ha-icon>
         <span class="text">
-          <span class="name">${cardDisplayName(card)}</span>
-          <span class="meta">${entity ? `${label} — ${entity.state}` : label}</span>
+          <span class="name">${displayName}</span>
+          ${meta ? html`<span class="meta">${meta}</span>` : nothing}
         </span>
       </div>
     `;

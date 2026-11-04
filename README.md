@@ -21,17 +21,19 @@ continuer à la main.
 
 ## Installation
 
-### Via HACS
+### Via le Marketplace (Home Assistant 2026.11+) ou HACS (2026.10 et antérieur)
 
-1. **HACS** → menu ⋮ → **Dépôts personnalisés**
+1. **Marketplace** (ou **HACS** sur les versions antérieures) → menu ⋮ → **Dépôts
+   personnalisés** / **Add from link**
 2. Ajoutez `https://github.com/loran33/Homeview`, catégorie **Intégration**
 3. Installez **Homeview**, puis redémarrez Home Assistant
 4. **Paramètres** → **Appareils et services** → **Ajouter une intégration** → **Homeview**
 
 Le panneau apparaît dans la barre latérale sous le nom **Homeview**.
 
-> Depuis Home Assistant 2026.11, HACS est remplacé par le **Marketplace** intégré
-> (Paramètres → Marketplace), qui accepte les mêmes dépôts personnalisés.
+> Le Marketplace exige un compte GitHub connecté pour ajouter un dépôt
+> personnalisé ; HACS (2026.10 et antérieur) le demande aussi pour suivre les mises à
+> jour d'un dépôt tiers.
 
 ### Manuellement
 

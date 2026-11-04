@@ -28,6 +28,28 @@ export async function listDashboards(
   return [DEFAULT_DASHBOARD, ...writable];
 }
 
+export interface LovelaceResource {
+  id?: string;
+  type: string;
+  url: string;
+}
+
+/**
+ * Lovelace resources are loaded lazily, per dashboard. A panel that is not a
+ * dashboard therefore sees an empty `window.customCards`, so the builder has to
+ * import the resources itself to know which cards exist.
+ */
+export async function listResources(
+  hass: HomeAssistant,
+): Promise<LovelaceResource[]> {
+  const result = await hass.callWS<
+    LovelaceResource[] | { resources?: LovelaceResource[] }
+  >({ type: "lovelace/resources", url_path: DEFAULT_DASHBOARD.url_path });
+  if (Array.isArray(result)) return result;
+  const nested = result?.resources;
+  return Array.isArray(nested) ? nested : [];
+}
+
 export async function fetchConfig(
   hass: HomeAssistant,
   urlPath: string,

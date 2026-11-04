@@ -27,8 +27,10 @@ import {
   describeError,
   fetchConfig,
   listDashboards,
+  listResources,
   saveConfig,
 } from "./lovelace";
+import type { LovelaceResource } from "./lovelace";
 import { CATEGORY_LABELS, buildPalette } from "./palette";
 import type { PaletteCategory, PaletteEntry } from "./palette";
 
@@ -55,6 +57,7 @@ export class HomeviewBuilder extends LitElement {
     _doc: { state: true },
     _selected: { state: true },
     _palette: { state: true },
+    _bubbleResource: { state: true },
     _filter: { state: true },
     _dirty: { state: true },
     _busy: { state: true },
@@ -70,6 +73,8 @@ export class HomeviewBuilder extends LitElement {
   declare _doc: BuilderDocument | undefined;
   declare _selected: Position | undefined;
   declare _palette: PaletteEntry[];
+  /** null until the Lovelace resource list has been read. */
+  declare _bubbleResource: boolean | null;
   declare _filter: string;
   declare _dirty: boolean;
   declare _busy: boolean;
@@ -78,6 +83,9 @@ export class HomeviewBuilder extends LitElement {
 
   private _booted = false;
   private _paletteTimer: number | undefined;
+  /** Resource URLs already imported, so reloads do not re-evaluate them. */
+  private _imported = new Set<string>();
+  private _importErrors: string[] = [];
 
   constructor() {
     super();
@@ -88,6 +96,7 @@ export class HomeviewBuilder extends LitElement {
     this._doc = undefined;
     this._selected = undefined;
     this._palette = [];
+    this._bubbleResource = null;
     this._filter = "";
     this._dirty = false;
     this._busy = false;
@@ -177,6 +186,16 @@ export class HomeviewBuilder extends LitElement {
     .banner.warn {
       background: var(--warning-color, #ff9800);
       color: #fff;
+    }
+    .banner button.inline {
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.15);
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
     }
     main {
       display: grid;
@@ -315,8 +334,8 @@ export class HomeviewBuilder extends LitElement {
         ${this._error ? html`<div class="banner error">${this._error}</div>` : nothing}
         ${bubbleMissing
           ? html`<div class="banner warn">
-              Bubble Card n'est pas détecté : installez-le pour obtenir sa palette. Les
-              cartes natives restent disponibles.
+              ${this._bubbleHint}
+              <button class="inline" @click=${this._reloadPalette}>↻ palette</button>
             </div>`
           : nothing}
 
@@ -399,7 +418,7 @@ export class HomeviewBuilder extends LitElement {
 
   private async _boot() {
     this._booted = true;
-    this._loadPalette(0);
+    void this._loadModules();
     await this._refreshDashboards();
 
     // Never open an existing dashboard unasked: opening one whose views are all
@@ -409,9 +428,66 @@ export class HomeviewBuilder extends LitElement {
   }
 
   /**
+   * Lovelace resources are loaded lazily, per dashboard. A panel is not a
+   * dashboard, so `window.customCards` is empty until something imports those
+   * modules: the builder must import them itself to know which cards exist.
+   * Each module registers its own entry as it evaluates.
+   */
+  private async _loadModules() {
+    const hass = this.hass;
+    if (!hass) return;
+
+    let resources: LovelaceResource[] | undefined;
+    try {
+      resources = await listResources(hass);
+    } catch {
+      resources = undefined;
+    }
+
+    if (resources) {
+      this._bubbleResource = resources.some(
+        (resource) => resource.type === "module" && /bubble/i.test(resource.url),
+      );
+    }
+
+    const modules = (resources ?? []).filter(
+      (resource) => resource.type === "module" && resource.url,
+    );
+    for (const resource of modules) {
+      if (this._imported.has(resource.url)) continue;
+      this._imported.add(resource.url);
+      try {
+        // Plugin loading from a runtime registry: the URL comes from the user's
+        // Lovelace resources, so a static import cannot exist and Vite must not
+        // try to bundle it.
+        await import(/* @vite-ignore */ resource.url);
+      } catch (error) {
+        this._importErrors.push(`${resource.url} — ${describeError(error)}`);
+      }
+      this._loadPalette(0);
+    }
+    this._loadPalette(0);
+  }
+
+  private _reloadPalette() {
+    this._importErrors = [];
+    void this._loadModules();
+  }
+
+  private get _bubbleHint(): string {
+    if (this._bubbleResource === false) {
+      return "Bubble Card n'est pas enregistré comme ressource Lovelace. Installez-le via HACS/Marketplace en catégorie « Tableau de bord », puis cliquez sur ↻ palette.";
+    }
+    if (this._bubbleResource === true) {
+      const detail = this._importErrors.length ? ` (${this._importErrors[0]})` : "";
+      return `La ressource Bubble Card est enregistrée mais son module ne s'est pas chargé${detail}. Rechargez la page, ou vérifiez la console du navigateur.`;
+    }
+    return "Bubble Card n'est pas détecté. Les cartes natives restent disponibles.";
+  }
+
+  /**
    * `window.customCards` is filled by each card's module as it loads, and there is
-   * no event for it: poll briefly so a slow Bubble Card module still lands in the
-   * palette without a reload.
+   * no event for it: poll briefly so a slow module still lands in the palette.
    */
   private _loadPalette(attempt: number) {
     this._palette = buildPalette(window.customCards ?? []);

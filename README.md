@@ -40,6 +40,25 @@ Le panneau apparaît dans la barre latérale sous le nom **Homeview**.
 Copiez `custom_components/homeview/` dans le dossier `custom_components/` de votre
 configuration, redémarrez, puis ajoutez l'intégration comme à l'étape 4.
 
+### Si « Ajouter une intégration » échoue
+
+Si le dialogue affiche `Le flux de configuration n'a pas pu être chargé: cannot use
+'in' operator to search for "translation_domain" … <!DOCTYPE html>`, votre Home
+Assistant renvoie une page **HTML** à la place du JSON de l'API
+(`POST /api/config/config_entries/flow`). En cause, presque toujours un proxy inverse
+ou un ingress avec repli SPA (`try_files … /index.html`), qui transforme le 404 de
+l'API en 200 `index.html`.
+
+L'intégration n'a pas besoin de ce dialogue. Ajoutez le domaine à
+`configuration.yaml` et redémarrez :
+
+```yaml
+homeview:
+```
+
+Le panneau apparaît dans la barre latérale, sans aucune entrée de configuration. Vous
+pourrez revenir au flux plus tard, une fois l'API saine.
+
 ### Bubble Card
 
 Homeview n'exige pas Bubble Card, mais sa palette « Bubble Card » n'apparaît que si
